@@ -82,10 +82,21 @@ export const buildReportDismissalDialog = (report) => {
  * @returns {{outcome: 'removed' | 'reverted-to-builtin' | 'nothing-to-clear', services: object[]}}
  * @throws when the service is still listed and it should have been removed
  */
-export const removeServiceGuide = ({ id, name, builtIn, actor, deleteService, hadLocalChanges = true }) => {
+export const removeServiceGuide = ({ id, name, builtIn, actor, deleteService, hadLocalChanges = true, clearOwnership }) => {
   const services = deleteService(id, actor);
   const stillListed = services.some((s) => s.id === id);
-  if (!stillListed) return { outcome: 'removed', services };
+  if (!stillListed) {
+    // The guide is gone for good, so its review assignment and private note must not outlive it.
+    // A failure here must not undo or hide the removal itself.
+    if (typeof clearOwnership === 'function') {
+      try {
+        clearOwnership(id);
+      } catch {
+        /* the guide is already removed; a stale assignment is harmless and invisible */
+      }
+    }
+    return { outcome: 'removed', services };
+  }
   if (builtIn) return { outcome: hadLocalChanges ? 'reverted-to-builtin' : 'nothing-to-clear', services };
   throw new Error(`"${name}" is still in the directory, so nothing was removed.`);
 };

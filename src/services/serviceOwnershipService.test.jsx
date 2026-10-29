@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import {
@@ -14,7 +15,9 @@ import {
   MAX_NOTE_LENGTH,
 } from './serviceOwnershipService';
 import { setCurrentActor, PermissionDeniedError } from './accessControl';
-import { saveAdminService, getAdminServices, getAuditLogs } from './adminService';
+import { saveAdminService, getAdminServices, getAuditLogs, deleteAdminService } from './adminService';
+import { getAllServices, getServiceById } from './serviceCatalog';
+import { removeServiceGuide } from '../utils/adminDestructiveActions';
 import ServiceRecordList from '../components/admin/ServiceRecordList';
 
 const makeStorage = () => {
@@ -171,7 +174,48 @@ describe('admin list markup', () => {
   });
 });
 
+describe('deleting a service', () => {
+  const removeGuide = (id, st) =>
+    removeServiceGuide({
+      id,
+      name: 'Custom Guide',
+      builtIn: false,
+      actor: 'Admin',
+      deleteService: deleteAdminService,
+      clearOwnership: (serviceId) => clearServiceOwnership(serviceId, { actorName: 'Admin', storage: st }),
+    });
+
+  it('clears the ownership record and private note of a removed custom guide', () => {
+    saveAdminService({ name: 'Custom Guide', category: 'Identity', shortDescription: 'x' }, 'Editor Eve');
+    const custom = getAdminServices().find((s) => s.name === 'Custom Guide');
+    assign(custom.id, { reviewerId: 'u1', privateNote: 'orphan-check-note' });
+    expect(getOwnershipMap(storage)[custom.id]).toBeDefined();
+
+    const result = removeGuide(custom.id, storage);
+    expect(result.outcome).toBe('removed');
+    expect(getOwnershipMap(storage)[custom.id]).toBeUndefined();
+    expect(JSON.stringify([...storage.data.values()])).not.toContain('orphan-check-note');
+  });
+
+  it('still removes the guide when clearing ownership throws', () => {
+    saveAdminService({ name: 'Custom Guide', category: 'Identity', shortDescription: 'x' }, 'Editor Eve');
+    const custom = getAdminServices().find((s) => s.name === 'Custom Guide');
+    const result = removeServiceGuide({
+      id: custom.id,
+      name: 'Custom Guide',
+      builtIn: false,
+      actor: 'Admin',
+      deleteService: deleteAdminService,
+      clearOwnership: () => {
+        throw new Error('boom');
+      },
+    });
+    expect(result.outcome).toBe('removed');
+  });
+});
+
 describe('public isolation', () => {
+  const srcDir = fileURLToPath(new URL('..', import.meta.url));
   const walk = (dir) =>
     readdirSync(dir).flatMap((name) => {
       const full = join(dir, name);
@@ -179,15 +223,24 @@ describe('public isolation', () => {
     });
 
   it('is imported only by admin code, never by public pages or components', () => {
-    const importers = walk(new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1').replace(/%20/g, ' '))
+    const importers = walk(srcDir)
       .filter((f) => /\.(jsx?|tsx?)$/.test(f) && !/\.test\./.test(f))
       .filter((f) => readFileSync(f, 'utf8').includes('serviceOwnershipService'))
-      .map((f) => f.replace(/\\/g, '/').split('/src/')[1])
+      .map((f) => relative(srcDir, f).split(sep).join('/'))
       .sort();
     expect(importers).toEqual([
       'components/admin/ServiceOwnershipModal.jsx',
       'components/admin/ServiceRecordList.jsx',
       'pages/Admin.jsx',
     ]);
+  });
+
+  it('keeps the private note and reviewer out of what the public service functions return', () => {
+    const target = getAllServices()[0];
+    assign(target.id, { reviewerId: 'u1', team: 'Revenue-Team-X', privateNote: 'PRIVATE-NOTE-9f3a' });
+    const publicData = JSON.stringify([getAllServices(), getServiceById(target.id)]);
+    expect(publicData).not.toContain('PRIVATE-NOTE-9f3a');
+    expect(publicData).not.toContain('Revenue-Team-X');
+    expect(publicData).not.toContain('Priya');
   });
 });

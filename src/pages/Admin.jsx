@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   CheckSquare,
   AlertTriangle,
@@ -129,16 +129,28 @@ const Admin = () => {
       setOwnership(getOwnershipMap());
       setAuditLogs(getAuditLogs());
       toast?.success?.('Review assignment saved. The public guide is unchanged.');
+    } else {
+      toast?.error?.('Review assignment was not saved.');
     }
     return result;
   };
 
   const handleClearOwnership = (serviceId) => {
-    clearServiceOwnership(serviceId, { actorName: user?.username || 'SuperAdmin' });
+    const cleared = clearServiceOwnership(serviceId, { actorName: user?.username || 'SuperAdmin' });
     setOwnership(getOwnershipMap());
     setAuditLogs(getAuditLogs());
-    toast?.success?.('Review assignment cleared.');
+    if (cleared) {
+      toast?.success?.('Review assignment cleared.');
+    } else {
+      toast?.error?.('Review assignment was not cleared.');
+    }
+    return cleared;
   };
+
+  const visibleServices = useMemo(
+    () => filterByOwnership(services, ownership, users, ownershipFilter),
+    [services, ownership, users, ownershipFilter]
+  );
 
   const handleLogout = () => {
     logout();
@@ -226,6 +238,7 @@ const Admin = () => {
         builtIn: pendingAction.builtIn,
         actor,
         deleteService: deleteAdminService,
+        clearOwnership: (serviceId) => clearServiceOwnership(serviceId, { actorName: actor }),
         hadLocalChanges: hasLocalServiceCopy(pendingAction.id),
       });
     });
@@ -706,12 +719,12 @@ const Admin = () => {
                     ))}
                   </select>
                   <span role="status" className="ownership-filter__count">
-                    Showing {filterByOwnership(services, ownership, users, ownershipFilter).length} of {services.length} guides
+                    Showing {visibleServices.length} of {services.length} guides
                   </span>
                 </div>
 
                 <ServiceRecordList
-                  services={filterByOwnership(services, ownership, users, ownershipFilter)}
+                  services={visibleServices}
                   ownership={ownership}
                   users={users}
                   onAssign={(service) => setOwnershipModal({ isOpen: true, service })}
