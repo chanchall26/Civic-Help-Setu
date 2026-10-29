@@ -38,5 +38,15 @@ const readAllServices = () => {
   }
 };
 
+/**
+ * The built-in guides as the assistant and the search index should see them:
+ * a saved edit replaces the built-in text, archived ones are left out, and
+ * guides the admin added are not included (they keep their own flow).
+ */
+export const getActiveBuiltInServices = () => {
+  const builtInIds = new Set(MOCK_SERVICES.map((b) => b.id));
+  return getAllServices().filter((s) => builtInIds.has(s.id));
+};
+
 // Archived guides are still found by id, so direct links and saved references keep working.
 export const getServiceById = (id) => getAllServices({ includeArchived: true }).find((s) => s.id === id) || null;

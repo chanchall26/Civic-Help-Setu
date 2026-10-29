@@ -5,7 +5,7 @@
  */
 
 import { retrieveGroundedChunks } from './sourceGroundedRetriever.js';
-import { MOCK_SERVICES } from '../data/services.js';
+import { getActiveBuiltInServices } from '../services/serviceCatalog.js';
 
 export const MANDATORY_LEGAL_DISCLAIMER =
   'Notice: This guidance is retrieved from approved civic service guidelines and does not constitute an official government eligibility decision. Rules, deadlines, and fees may vary by municipality.';
@@ -70,7 +70,7 @@ export async function askGroundedCivicAssistant(query, options = {}) {
 
   // 3. Grounded Answer Synthesis
   const topChunk = retrieval.retrievedChunks[0];
-  const service = MOCK_SERVICES.find((s) => s.id === topChunk.serviceId) || null;
+  const service = getActiveBuiltInServices().find((s) => s.id === topChunk.serviceId) || null;
 
   // Synthesize answer text grounded exclusively in retrieved chunks
   const chunkContents = retrieval.retrievedChunks.map((c) => c.content);

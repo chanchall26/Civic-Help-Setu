@@ -258,6 +258,9 @@ export const deleteAdminService = (id, actorName = 'SuperAdmin') => {
 // changes. The plan is recomputed from fresh storage, so stale ids and records
 // changed in another tab are skipped instead of failing the batch. A built-in
 // guide is archived through a saved copy on top of it, like an edit.
+// Known limit: this reads storage and writes it back without a lock, so two
+// tabs archiving at the same moment can overwrite each other's change (last
+// write wins). localStorage has no atomic update, and admin use is rare.
 const applyLifecycle = (kind, ids, actorName) => {
   const archiving = kind === 'archive';
   const failure = (error) => ({ ok: false, changed: 0, plan: null, error, services: getAdminServices() });
@@ -277,7 +280,8 @@ const applyLifecycle = (kind, ids, actorName) => {
     return { ok: true, changed: 0, plan, error: null, services: all };
   }
 
-  const today = new Date().toISOString().split('T')[0];
+  // Full timestamp, so the stored value does not depend on which day the admin's timezone is on.
+  const today = new Date().toISOString();
   const changeIds = new Set(plan.toChange.map((c) => c.id));
   const next = [...custom];
   for (const svc of all) {

@@ -33,6 +33,7 @@ export function retrieveGroundedChunks(query, options = {}) {
     };
   }
 
+  ragIndex.refreshIfCatalogChanged();
   const chunks = ragIndex.getChunks();
   const totalDocs = ragIndex.totalDocs;
   const avgDocLength = ragIndex.avgDocLength;

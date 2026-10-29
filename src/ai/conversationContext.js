@@ -1,4 +1,4 @@
-import { MOCK_SERVICES } from '../data/services.js';
+import { getActiveBuiltInServices } from '../services/serviceCatalog.js';
 
 // Real civic scenarios shown before the first question is asked.
 export const STARTER_PROMPTS = [
@@ -28,7 +28,7 @@ const serviceKeywords = (service) =>
 
 const mentionsAnyService = (query) => {
   const words = new Set(tokenize(query));
-  return MOCK_SERVICES.some((s) => serviceKeywords(s).some((k) => words.has(k)));
+  return getActiveBuiltInServices().some((s) => serviceKeywords(s).some((k) => words.has(k)));
 };
 
 // Service id of the latest assistant answer, only if no user message follows it
@@ -50,7 +50,7 @@ export const resolveFollowUpQuery = (query, messages = []) => {
   if (mentionsAnyService(trimmed)) return trimmed;
 
   const serviceId = lastAssistantServiceId(messages);
-  const service = serviceId && MOCK_SERVICES.find((s) => s.id === serviceId);
+  const service = serviceId && getActiveBuiltInServices().find((s) => s.id === serviceId);
   if (!service) return trimmed;
 
   return `${trimmed.replace(/[?.!]+$/, '')} for ${service.name}`;

@@ -1,4 +1,4 @@
-import { MOCK_SERVICES } from '../data/services';
+import { getActiveBuiltInServices } from '../services/serviceCatalog';
 import { redactPersonalData } from '../utils/dataMinimization';
 import { logDiagnostic } from '../utils/diagnostics';
 
@@ -49,9 +49,10 @@ export const buildPersonalizedContext = () => {
     savedItems = [];
   }
 
+  const activeServices = getActiveBuiltInServices();
   const matchingServices = savedItems
     .map((item) => {
-      const found = MOCK_SERVICES.find((s) => s.id === item.serviceId);
+      const found = activeServices.find((s) => s.id === item.serviceId);
       return found ? { ...found, folder: item.folder, priority: item.priority } : null;
     })
     .filter(Boolean);

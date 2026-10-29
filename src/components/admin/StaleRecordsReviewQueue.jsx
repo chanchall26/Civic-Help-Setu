@@ -15,7 +15,7 @@ import {
   getCatalogFreshnessHealth,
   recordServiceReview,
 } from '../../services/dataFreshnessTrustService';
-import { MOCK_SERVICES } from '../../data/services';
+import { getAllServices } from '../../services/serviceCatalog';
 
 const StaleRecordsReviewQueue = () => {
   const [reviewQueue, setReviewQueue] = useState([]);
@@ -26,9 +26,10 @@ const StaleRecordsReviewQueue = () => {
   const [reviewerName, setReviewerName] = useState('Admin Auditor');
 
   const refresh = () => {
-    const queue = getStaleReviewQueue(MOCK_SERVICES);
+    const active = getAllServices();
+    const queue = getStaleReviewQueue(active);
     setReviewQueue(queue);
-    setHealth(getCatalogFreshnessHealth(MOCK_SERVICES));
+    setHealth(getCatalogFreshnessHealth(active));
   };
 
   useEffect(() => {

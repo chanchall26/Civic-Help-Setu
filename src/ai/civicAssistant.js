@@ -1,4 +1,4 @@
-import { MOCK_SERVICES } from '../data/services';
+import { getActiveBuiltInServices } from '../services/serviceCatalog';
 import { FAQ_DATABASE } from '../data/faq_database';
 
 export const askCivicAssistant = async (query, conversationContext = []) => {
@@ -8,7 +8,7 @@ export const askCivicAssistant = async (query, conversationContext = []) => {
   const lowerQuery = query.toLowerCase().trim();
 
   // 1. Direct Service Guide matching
-  const serviceMatch = MOCK_SERVICES.find((s) => {
+  const serviceMatch = getActiveBuiltInServices().find((s) => {
     const sName = s.name.toLowerCase();
     const sId = s.id.toLowerCase();
     const sCat = s.category.toLowerCase();

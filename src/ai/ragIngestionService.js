@@ -4,7 +4,7 @@
  * builds an inverted BM25 + TF-IDF index, and preserves source metadata for verifiable citations.
  */
 
-import { MOCK_SERVICES } from '../data/services.js';
+import { getActiveBuiltInServices } from '../services/serviceCatalog.js';
 import { FAQ_DATABASE } from '../data/faq_database.js';
 
 // English stop words for accurate token filtering
@@ -183,7 +183,12 @@ class RagKnowledgeIndex {
    * @param {Object[]} services
    * @param {Object[]} faqs
    */
-  buildIndex(services = MOCK_SERVICES, faqs = FAQ_DATABASE) {
+  buildIndex(services, faqs = FAQ_DATABASE) {
+    // Default catalog: active built-in guides only. Remember which ones so a
+    // later archive/restore can be noticed (see refreshIfCatalogChanged).
+    this.followsCatalog = services === undefined;
+    if (this.followsCatalog) services = getActiveBuiltInServices();
+    this.catalogSignature = services.map((s) => s.id).join('|');
     const allChunks = [];
 
     // Ingest services
@@ -235,6 +240,17 @@ class RagKnowledgeIndex {
       uniqueTerms: this.invertedIndex.size,
       indexedAt: this.indexedAt,
     };
+  }
+
+  /**
+   * Rebuilds the index when it was built from the default catalog and a guide
+   * has since been archived or restored, so retired guides stop being quoted
+   * without a page reload. Indexes built from explicit data are left alone.
+   */
+  refreshIfCatalogChanged() {
+    if (!this.followsCatalog) return;
+    const signature = getActiveBuiltInServices().map((s) => s.id).join('|');
+    if (signature !== this.catalogSignature) this.buildIndex();
   }
 
   /**
