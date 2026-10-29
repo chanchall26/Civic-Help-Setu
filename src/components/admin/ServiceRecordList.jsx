@@ -17,11 +17,16 @@ const deliveryLabel = (svc) => svc.type || 'Online / Offline';
 
 const cellPadding = { padding: '0.85rem 1rem' };
 
-const ownerText = (ownership, users, svc) => {
+const OwnerCell = ({ ownership, users, svc }) => {
   const record = normalizeOwnership(ownership?.[svc.id]);
   const owner = describeOwner(record, users);
   const status = record && record.queueStatus !== 'none' ? QUEUE_STATUSES[record.queueStatus] : '';
-  return { owner, status };
+  return (
+    <>
+      <span className={`ownership-tag ownership-tag--${owner.state}`}>{owner.label}</span>
+      {status && <span className="ownership-status">{status}</span>}
+    </>
+  );
 };
 
 // ownership, users and onAssign are optional: without onAssign the list looks exactly as before.
@@ -56,15 +61,7 @@ const ServiceRecordList = ({ services, onEdit, onDelete, ownership = {}, users =
             </td>
             {onAssign && (
               <td style={{ ...cellPadding, color: 'var(--text-secondary)', overflowWrap: 'anywhere' }}>
-                {(() => {
-                  const { owner, status } = ownerText(ownership, users, svc);
-                  return (
-                    <>
-                      <span className={`ownership-tag ownership-tag--${owner.state}`}>{owner.label}</span>
-                      {status && <span className="ownership-status">{status}</span>}
-                    </>
-                  );
-                })()}
+                <OwnerCell ownership={ownership} users={users} svc={svc} />
               </td>
             )}
             <td style={{ ...cellPadding, textAlign: 'right', whiteSpace: 'nowrap' }}>
@@ -119,15 +116,7 @@ const ServiceRecordList = ({ services, onEdit, onDelete, ownership = {}, users =
               <div>
                 <dt>Reviewer / team</dt>
                 <dd>
-                  {(() => {
-                    const { owner, status } = ownerText(ownership, users, svc);
-                    return (
-                      <>
-                        <span className={`ownership-tag ownership-tag--${owner.state}`}>{owner.label}</span>
-                        {status && <span className="ownership-status">{status}</span>}
-                      </>
-                    );
-                  })()}
+                  <OwnerCell ownership={ownership} users={users} svc={svc} />
                 </dd>
               </div>
             )}
